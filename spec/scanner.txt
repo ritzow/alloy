@@ -1,0 +1,29 @@
+tag = #text $end
+text = a run of alphanumerics
+
+
+
+
+
+
+
+
+
+
+
+
+
+decimal_start -> digit decimal_cont
+decimal_cont -> digit
+decimal_cont -> NULL
+digit -> 0
+digit -> 1
+digit -> 2
+digit -> 3
+digit -> 4
+digit -> 5
+digit -> 6
+digit -> 7
+digit -> 8
+digit -> 9
+

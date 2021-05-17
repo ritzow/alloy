@@ -1,0 +1,5 @@
+#alias #module BaseES {
+	#alias #type Cuerda -> Base.String; { //using name aliasing, one can easily translate entire software libraries while retaining compatibility and interoperability with the original library
+		#alias longitude -> length;
+	}
+}
