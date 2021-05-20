@@ -51,6 +51,14 @@ public class AlloyScanner {
 			case ',' -> advance(SimpleToken.COMMA);
 			case ';' -> advance(SimpleToken.SEMICOLON);
 			case '.' -> advance(SimpleToken.DOT);
+			case '<' -> advance(SimpleToken.OPEN_TYPE_PARAM);
+			case '>' -> advance(SimpleToken.CLOSE_TYPE_PARAM);
+			case '-' -> advance(SimpleToken.MINUS);
+			case '+' -> advance(SimpleToken.ADD);
+			case '*' -> advance(SimpleToken.MULTIPLY);
+			case '=' -> advance(SimpleToken.EQUALS);
+			case '?' -> advance(SimpleToken.QUESTION_MARK);
+			case ':' -> advance(SimpleToken.COLON);
 			case '/' -> switch(codePoint = nextCodePoint()) {
 				case '/' -> {
 					/* double slash "//" go to end of line. */
@@ -73,21 +81,29 @@ public class AlloyScanner {
 			};
 
 			case '"' -> {
-				while((codePoint = nextCodePoint()) != '"') {
+				while((codePoint = nextCodePoint()) != '"' && codePoint != -1) {
 					buffer.add(codePoint);
 				}
+
+				if(codePoint == -1) {
+					throw new TokenException("Unclosed string");
+				}
+
+				codePoint = nextCodePoint();
+
 				yield new TextLiteral(bufferToString(buffer));
 			}
 
 			default -> {
-				if(Character.isAlphabetic(codePoint)) {
+				if(Character.isAlphabetic(codePoint) || codePoint == '_') {
 					buffer.add(codePoint);
-					while(Character.isLetterOrDigit(codePoint = nextCodePoint())) {
+					while(Character.isLetterOrDigit(codePoint = nextCodePoint()) || codePoint == '_') {
 						buffer.add(codePoint);
 					}
 
 					yield new NameSegment(bufferToString(buffer));
 				} else if(Character.isDigit(codePoint)) {
+					buffer.add(codePoint);
 					while(Character.isDigit(codePoint = nextCodePoint())) {
 						buffer.add(codePoint);
 					}

@@ -1,7 +1,8 @@
 
-/** Base module for the Alloy (Metallic?) programming language **/
+/** Base module for the Alloy programming language **/
 #module Base<ConstantString crazyStuff> { /* the ConstantString in the <> is a template parameter for this entire module, allowing the module to be compiled differently depending on where its included.
-											 allows for multiple versions of a module to be used at once ie "Base<"lol">.n32 someInteger;" basically allows module fields to have template parameters that arent eval'd 
+											 allows for multiple versions of a module to be used at once ie
+											 Base<"lol">.n32 someInteger;" basically allows module fields to have template parameters that arent eval'd
 											 would be useful if say you wanted to allow a library user to specify the logging mechanism used by the module instead of a pre-defined logging mechanism */
 	//TODO include nested functions (need some system for having non-sequential structures inside sequential stuff, like another set of brackets or something)
 
@@ -25,33 +26,33 @@
 		FRIDAY,
 		SATURDAY,
 		SUNDAY
-		
+
 		//fields that are quick to access using the enum value as an index
 		ConstantString name;
-		
+
 		//virtual functions can be used when the enum is declared #virtual
 		#public #return boolean weekday();
 	}
-	
+
 	#public #type Virtual<T> { //maybe do some weird thing like this for virtual types? and have compiler magic to allow interface methods of T to be called on this type.
 		#private n64 classPointer;
 		#private T type;
 	}
-	
+
 	#type Text #inherit String; //create new types that copy the functionality of others (without polymorphism and overhead)
-	
+
 	#alias #type JavaArray<T> -> Address<Array<T, ?>>; //aliases can simplify types while being transparent and interoperable, unlike defining a type using another
-	
+
 	#alias #type int -> i32; //using aliases, it is possible to use other languages' naming conventions
 
 	#public #interface Addable {
-		
+
 		/** Add two values together and return the sum, does not modify the operands **/
 		#public #return T add<Addable T>(T val);
 	}
 
 	#public #interface Numeric : Addable, Subtractable, Multiplyable, Dividable;
-	
+
 	#public #interface Integral<T : Integral> : Numeric {
 		#public #return T modulo(T val)
 	}
@@ -61,23 +62,23 @@
 		//implement Numeric interfaces methods
 		//implement bitset methods (ie bitwise operations)
 	}
-	
+
 	/** Signed two's-complement 32-bit integer **/
 	#public #static #type i32 : Integral, BitSet { //#static tag means can be available during both compile time and runtime depending on context, #static-only would mean it is only available at compile-time and wont exist at runtime
 		#public #property size = 4; //maybe replace #property with #constant since all fields in types are instance fields
-		
+
 		#public #constant #return i32 add();
 		#public #constant #return i32 subtract();
 		#public #constant #return i32 multiply();
 		#public #constant #return i32 divide();
-		
+
 		#public #constant #return i32 xor();
 	}
-	
+
 	//define a new tag that can go on language constructs
 	#public #tag deprecated<n32 since> { //TODO maybe the <> should be replaced with regular constructors which can have #constant parameters that are required to be specified at compile-time.
 		#private n32 sinceVersion = since;
-	
+
 		#public #return boolean initialize(LanguageConstruct construct) {
 			//TODO examine construct's other tags to make sure it doesn't have any conflicting tags (like some sort of #new-feature tag)
 			return true; //can apply to any language construct
@@ -99,28 +100,28 @@
 	#public #type ConstantString<n32 LENGTH> : CharacterSequence { //string literals are of this type
 		private Address<Array<n8, LENGTH>>
 	}
-	
+
 	#public #type String : CharacterSequence {
 		#private Address<u8> codePointsUTF8;
 	}
-	
+
 	#public #interface CharacterSequence : Allocatable { //an interface is not a type, a type is concrete and cannot be "subclassed", an inteface is methods only, no constants, etc. (maybe properties/generics?)
 		#public ...
 	}
-	
+
 	#private testing() {
 		for(n32 i = 0; i < 100; i += 1) {
 			#return n32 nested() { //only problem with nested functions is they may require space to be allocated on stack for all parent variables because they could be used by functions called in child.
 				#return i * 100;
 			}
-			
+
 			print(nested());
 			print(nested());
 		}
 	}
-	
+
 	#private #return square(Virtual<Integral<n32>> a) {
-		return a * a; //this wouldn't actually work since the return type for the methods in these 
+		return a * a; //this wouldn't actually work since the return type for the methods in these
 	}
 
 	#entry-point #private run { //no parens because this is not a function, it is not called the same as a function
@@ -128,7 +129,7 @@
 		#stack n32 counter = 0; //the #stack flag means that the variable will be addressed and must have stack space reserved for it, this must be specified before ::address is used.
 		n32 counter2 = 433; //without the #stack flag, the variable could be stored on the stack or just in a register
 		Virtual<n32> vint = 10; //this would allow you to use the interfaces of n32 (Integral and BitSet) in an abstract way at runtime (sorta) since a Virtual<n32> is also a Virtual<Integral> and Virtual<BitSet>
-		
+
 		SomeStruct struct;
 		n32 test;
 		test += 1; //this is illegal because test has not been initialized
@@ -144,11 +145,11 @@
 }
 
 module Heap {
-	
+
 	#public #return Address<TYPE> Allocate<TYPE>() {
 		//allocate on heap using TYPE::size property (a property is a compile-time field, usually initialized with type param generics i.e. <>)
 		TYPE.initialize(); //since it is Allocatable, a virtual function dispatch can be performed to find its proper allocation code
-	}	
+	}
 
 	#public #return Address<TYPE> Allocate<TYPE : Allocatable>() { //we do this in this way so that return type is address to concrete structure but parameter could be virtual or not virtual but with interface still
 		//allocate on heap using TYPE::size property (a property is a compile-time field, usually initialized with type param generics i.e. <>)

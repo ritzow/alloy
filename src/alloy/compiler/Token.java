@@ -8,15 +8,20 @@ public sealed interface Token {
 		CLOSE_SUB,
 		OPEN_PAREN,
 		CLOSE_PAREN,
+		OPEN_TYPE_PARAM,
+		CLOSE_TYPE_PARAM,
 		COMMA,
 		SEMICOLON,
 		TAG,
 		DOT,
 		END,
 		ADD,
-		SUBTRACT,
+		MINUS,
 		DIVIDE,
-		MULTIPLY
+		MULTIPLY,
+		EQUALS,
+		QUESTION_MARK,
+		COLON
 	}
 
 	final record NameSegment(String text) implements Token {
