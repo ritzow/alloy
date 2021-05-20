@@ -12,7 +12,11 @@ public sealed interface Token {
 		SEMICOLON,
 		TAG,
 		DOT,
-		END
+		END,
+		ADD,
+		SUBTRACT,
+		DIVIDE,
+		MULTIPLY
 	}
 
 	final record NameSegment(String text) implements Token {

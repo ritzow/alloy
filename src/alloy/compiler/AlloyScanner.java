@@ -10,10 +10,8 @@ import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.sql.Array;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.stream.Collectors;
 
 public class AlloyScanner {
 	private final BufferedReader in;
@@ -30,7 +28,8 @@ public class AlloyScanner {
 
 	public Token next() throws IOException {
 		Token token;
-		do {
+		do
+		{
 			token = parseNext();
 		} while(token == null);
 		return token;
@@ -52,12 +51,34 @@ public class AlloyScanner {
 			case ',' -> advance(SimpleToken.COMMA);
 			case ';' -> advance(SimpleToken.SEMICOLON);
 			case '.' -> advance(SimpleToken.DOT);
+			case '/' -> switch(codePoint = nextCodePoint()) {
+				case '/' -> {
+					/* double slash "//" go to end of line. */
+					do {
+						switch(codePoint = nextCodePoint()) {
+							case '\n' -> {
+								yield null;
+							}
+							case -1 -> {
+								yield SimpleToken.END;
+							}
+							default -> {/* keep reading */}
+						}
+					} while(true);
+				}
+				case '*' -> {
+					yield skipMultilineComment();
+				}
+				default -> SimpleToken.DIVIDE;
+			};
+
 			case '"' -> {
 				while((codePoint = nextCodePoint()) != '"') {
 					buffer.add(codePoint);
 				}
 				yield new TextLiteral(bufferToString(buffer));
 			}
+
 			default -> {
 				if(Character.isAlphabetic(codePoint)) {
 					buffer.add(codePoint);
@@ -71,7 +92,7 @@ public class AlloyScanner {
 						buffer.add(codePoint);
 					}
 
-					if (codePoint == '.') {
+					if(codePoint == '.') {
 						buffer.add(codePoint);
 
 						codePoint = nextCodePoint();
@@ -84,12 +105,50 @@ public class AlloyScanner {
 							throw new TokenException();
 						}
 					}
-					yield new RationalLiteral(new BigDecimal(bufferToString(buffer)));
+					yield new RationalLiteral(
+						new BigDecimal(bufferToString(buffer)));
 				} else {
-					throw new TokenException("Unknown start of token: " + Character.getName(codePoint) + " on line " + lineNumber);
+					throw new TokenException("Unknown start of token: "
+						+ Character.getName(codePoint) + " on line " + lineNumber);
 				}
 			}
 		};
+	}
+
+	//TODO count line numbers
+	private Token skipMultilineComment() throws IOException {
+		int depth = 1;
+		codePoint = nextCodePoint();
+		do {
+			switch(codePoint) {
+				case '/' -> {
+					if((codePoint = nextCodePoint()) == '*') {
+						depth++;
+					} else if(codePoint == -1) {
+						throw new
+							TokenException("Early end of file during " +
+							"multiline comment parse");
+					} //else keep going with this one
+				}
+				case '*' -> {
+					if((codePoint = nextCodePoint()) == '/') {
+						depth--;
+						if(depth == 0) {
+							/* Successfully found end of outermost comment */
+							return advance(null);
+						}
+					} else if(codePoint == -1) {
+						throw new
+							TokenException("Early end of file during " +
+							"multiline comment parse");
+					} //else keep going
+				}
+				case -1 -> throw new
+					TokenException("Early end of file during " +
+					"multiline comment parse");
+				default -> codePoint = nextCodePoint();
+			}
+		} while(true);
 	}
 
 	private Token advance(Token token) throws IOException {
