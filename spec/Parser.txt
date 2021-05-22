@@ -1,0 +1,12 @@
+
+/* The grammar for an Alloy source file */
+
+/* at this point, anything that is in the default view (module alloy.source) is available.
+   That includes the #view directive and string literals among other things. */
+FILE_DIRECTIVE_LIST -> {
+	???
+}
+
+TAG_ELEM -> TAG NAME
+NAME -> NAME_SEGMENT DOT NAME
+NAME -> EMPTY

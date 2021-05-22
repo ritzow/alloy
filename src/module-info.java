@@ -1,0 +1,3 @@
+module alloy.compiler {
+
+}

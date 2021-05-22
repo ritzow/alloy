@@ -1,9 +1,6 @@
 package alloy.compiler;
 
-import alloy.compiler.Token.NameSegment;
-import alloy.compiler.Token.RationalLiteral;
-import alloy.compiler.Token.SimpleToken;
-import alloy.compiler.Token.TextLiteral;
+import alloy.compiler.Token.*;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.math.BigDecimal;
@@ -17,22 +14,36 @@ public class AlloyScanner {
 	private final BufferedReader in;
 	private final List<Integer> buffer;
 	private int codePoint;
-	private int lineNumber;
+	private int line, column;
 
 	public AlloyScanner(Path file) throws IOException {
 		this.in = Files.newBufferedReader(file, StandardCharsets.UTF_8);
 		this.buffer = new ArrayList<>(32);
 		this.codePoint = nextCodePoint();
-		this.lineNumber = 1;
+		this.line = 1;
 	}
 
-	public Token next() throws IOException {
+	public static record ScanContext(int lineNumber, int columnNumber) {
+
+	}
+
+	public static record TokenResult(Token token, ScanContext context) {
+		@Override
+		public String toString() {
+			return "(" + context.lineNumber + "," + context.columnNumber + ") "  + token;
+		}
+	}
+
+	public TokenResult next() throws IOException {
 		Token token;
+		int linestart, columnstart;
 		do
 		{
+			linestart = line;
+			columnstart = column;
 			token = parseNext();
 		} while(token == null);
-		return token;
+		return new TokenResult(token, new ScanContext(linestart, columnstart));
 	}
 
 	private Token parseNext() throws IOException {
@@ -40,7 +51,7 @@ public class AlloyScanner {
 			case -1 -> SimpleToken.END;
 			case '\t', ' ', '\r' -> advance(null);
 			case '\n' -> {
-				lineNumber++;
+				newline();
 				yield advance(null);
 			}
 			case '#' -> advance(SimpleToken.TAG);
@@ -59,13 +70,29 @@ public class AlloyScanner {
 			case '=' -> advance(SimpleToken.EQUALS);
 			case '?' -> advance(SimpleToken.QUESTION_MARK);
 			case ':' -> advance(SimpleToken.COLON);
+			case '\'' -> {
+				if((codePoint = nextCodePoint()) == '\'') {
+					throw new TokenException("Empty character literal");
+				} else {
+					int txt = codePoint;
+
+					if((codePoint = nextCodePoint()) != '\'') {
+						throw new TokenException("Too many characters in character literal: "
+							+ Character.getName(codePoint));
+					}
+
+					codePoint = nextCodePoint();
+					yield new CharacterLiteral(txt);
+				}
+			}
 			case '/' -> switch(codePoint = nextCodePoint()) {
 				case '/' -> {
 					/* double slash "//" go to end of line. */
 					do {
 						switch(codePoint = nextCodePoint()) {
 							case '\n' -> {
-								yield null;
+								newline();
+								yield advance(null);
 							}
 							case -1 -> {
 								yield SimpleToken.END;
@@ -81,8 +108,12 @@ public class AlloyScanner {
 			};
 
 			case '"' -> {
+				/* TODO set line on newline */
 				while((codePoint = nextCodePoint()) != '"' && codePoint != -1) {
 					buffer.add(codePoint);
+					if(codePoint == '\n') {
+						newline();
+					}
 				}
 
 				if(codePoint == -1) {
@@ -125,10 +156,15 @@ public class AlloyScanner {
 						new BigDecimal(bufferToString(buffer)));
 				} else {
 					throw new TokenException("Unknown start of token: "
-						+ Character.getName(codePoint) + " on line " + lineNumber);
+						+ Character.getName(codePoint) + " on line " + line);
 				}
 			}
 		};
+	}
+
+	private void newline() {
+		line++;
+		column = 0;
 	}
 
 	//TODO count line numbers
@@ -162,9 +198,17 @@ public class AlloyScanner {
 				case -1 -> throw new
 					TokenException("Early end of file during " +
 					"multiline comment parse");
-				default -> codePoint = nextCodePoint();
+				case '\n' -> {
+					newline();
+					advance();
+				}
+				default -> advance();
 			}
 		} while(true);
+	}
+
+	private void advance() throws IOException {
+		codePoint = nextCodePoint();
 	}
 
 	private Token advance(Token token) throws IOException {
@@ -185,6 +229,7 @@ public class AlloyScanner {
 				int unit1 = in.read();
 				if(unit1 >= 0) {
 					if(Character.isLowSurrogate((char)unit1)) {
+						column++;
 						return Character.toCodePoint((char)unit0, (char)unit1);
 					} else {
 						in.close();
@@ -196,6 +241,7 @@ public class AlloyScanner {
 					return -1;
 				}
 			} else {
+				column++;
 				return unit0;
 			}
 		} else {

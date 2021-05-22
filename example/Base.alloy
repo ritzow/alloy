@@ -39,6 +39,9 @@
 		#private T type;
 	}
 
+	#public #constant UnicodeChar TEST_CHAR = '↩';
+	#public #constant UnicodeChar TEST_CHAR2 = ' ';
+
 	#type Text #inherit String; //create new types that copy the functionality of others (without polymorphism and overhead)
 
 	#alias #type JavaArray<T> -> Address<Array<T, ?>>; //aliases can simplify types while being transparent and interoperable, unlike defining a type using another
@@ -144,7 +147,7 @@
 	}
 }
 
-module Heap {
+#module Heap {
 
 	#public #return Address<TYPE> Allocate<TYPE>() {
 		//allocate on heap using TYPE::size property (a property is a compile-time field, usually initialized with type param generics i.e. <>)
