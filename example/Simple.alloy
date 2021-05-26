@@ -1,9 +1,7 @@
-#alloy.source.example #alloy.source.test {
- 	jdflkj
-}
-/*#
-//comment here // comment lol
-#
-/** hello **/
+#alloy.source.view.test #alloy.source.view {
+	/* test passing some expressions to tags */
+ 	#alloy.source.view 5 3 #alloy.source.view "hello there!" 434.3;
+ 	#alloy.source.view 231.2798 {
 
-#test2 hello;*/
+ 	}
+}

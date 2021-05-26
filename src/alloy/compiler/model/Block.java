@@ -1,5 +1,6 @@
-package alloy.compiler.ast;
+package alloy.compiler.model;
 
+import alloy.compiler.model.Tag;
 import java.util.List;
 import java.util.Optional;
 

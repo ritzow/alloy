@@ -1,23 +1,22 @@
 package alloy.compiler;
 
 import alloy.compiler.Token.*;
-import java.io.BufferedReader;
 import java.io.IOException;
+import java.io.Reader;
 import java.math.BigDecimal;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 
+import static alloy.compiler.Token.SimpleToken.*;
+
 public class AlloyScanner {
-	private final BufferedReader in;
+	private final Reader in;
 	private final List<Integer> buffer;
 	private int codePoint;
 	private int line, column;
 
-	public AlloyScanner(Path file) throws IOException {
-		this.in = Files.newBufferedReader(file, StandardCharsets.UTF_8);
+	public AlloyScanner(Reader in) throws IOException {
+		this.in = in;
 		this.buffer = new ArrayList<>(32);
 		this.codePoint = nextCodePoint();
 		this.line = 1;
@@ -48,28 +47,31 @@ public class AlloyScanner {
 
 	private Token parseNext() throws IOException {
 		return switch(codePoint) {
-			case -1 -> SimpleToken.END;
+			case -1 -> END;
 			case '\t', ' ', '\r' -> advance(null);
 			case '\n' -> {
 				newline();
 				yield advance(null);
 			}
-			case '#' -> advance(SimpleToken.TAG);
-			case '{' -> advance(SimpleToken.OPEN_SUB);
-			case '}' -> advance(SimpleToken.CLOSE_SUB);
-			case '(' -> advance(SimpleToken.OPEN_PAREN);
-			case ')' -> advance(SimpleToken.CLOSE_PAREN);
-			case ',' -> advance(SimpleToken.COMMA);
-			case ';' -> advance(SimpleToken.SEMICOLON);
-			case '.' -> advance(SimpleToken.DOT);
-			case '<' -> advance(SimpleToken.OPEN_TYPE_PARAM);
-			case '>' -> advance(SimpleToken.CLOSE_TYPE_PARAM);
-			case '-' -> advance(SimpleToken.MINUS);
-			case '+' -> advance(SimpleToken.ADD);
-			case '*' -> advance(SimpleToken.MULTIPLY);
-			case '=' -> advance(SimpleToken.EQUALS);
-			case '?' -> advance(SimpleToken.QUESTION_MARK);
-			case ':' -> advance(SimpleToken.COLON);
+			case '#' -> advance(TAG);
+			case '{' -> advance(OPEN_BRACE);
+			case '}' -> advance(CLOSE_BRACE);
+			case '(' -> advance(OPEN_PAREN);
+			case ')' -> advance(CLOSE_PAREN);
+			case '[' -> advance(OPEN_BRACKET);
+			case ']' -> advance(CLOSE_BRACKET);
+			case ',' -> advance(COMMA);
+			case ';' -> advance(SEMICOLON);
+			case '.' -> advance(DOT);
+			case '<' -> advance(OPEN_CHEVRON);
+			case '>' -> advance(CLOSE_CHEVRON);
+			case '-' -> advance(MINUS);
+			case '+' -> advance(ADD);
+			case '*' -> advance(MULTIPLY);
+			case '=' -> advance(EQUALS);
+			case '?' -> advance(QUESTION_MARK);
+			case ':' -> advance(COLON);
+			/* UnicodeCodePointLiteral */
 			case '\'' -> {
 				if((codePoint = nextCodePoint()) == '\'') {
 					throw new TokenException("Empty character literal");
@@ -85,6 +87,8 @@ public class AlloyScanner {
 					yield new CharacterLiteral(txt);
 				}
 			}
+
+			/* Comments */
 			case '/' -> switch(codePoint = nextCodePoint()) {
 				case '/' -> {
 					/* double slash "//" go to end of line. */
@@ -95,7 +99,7 @@ public class AlloyScanner {
 								yield advance(null);
 							}
 							case -1 -> {
-								yield SimpleToken.END;
+								yield END;
 							}
 							default -> {/* keep reading */}
 						}
@@ -104,9 +108,10 @@ public class AlloyScanner {
 				case '*' -> {
 					yield skipMultilineComment();
 				}
-				default -> SimpleToken.DIVIDE;
+				default -> DIVIDE;
 			};
 
+			/* UnicodeStringLiteral */
 			case '"' -> {
 				/* TODO set line on newline */
 				while((codePoint = nextCodePoint()) != '"' && codePoint != -1) {
@@ -126,6 +131,7 @@ public class AlloyScanner {
 			}
 
 			default -> {
+				/* NameSegment */
 				if(Character.isAlphabetic(codePoint) || codePoint == '_') {
 					buffer.add(codePoint);
 					while(Character.isLetterOrDigit(codePoint = nextCodePoint()) || codePoint == '_') {
@@ -133,7 +139,10 @@ public class AlloyScanner {
 					}
 
 					yield new NameSegment(bufferToString(buffer));
-				} else if(Character.isDigit(codePoint)) {
+				}
+
+				/* RationalLiteral */
+				else if(Character.isDigit(codePoint)) {
 					buffer.add(codePoint);
 					while(Character.isDigit(codePoint = nextCodePoint())) {
 						buffer.add(codePoint);
@@ -145,15 +154,15 @@ public class AlloyScanner {
 						codePoint = nextCodePoint();
 
 						if(Character.isDigit(codePoint)) {
-							while(Character.isDigit(codePoint = nextCodePoint())) {
+							do {
 								buffer.add(codePoint);
-							}
+								codePoint = nextCodePoint();
+							} while(Character.isDigit(codePoint));
 						} else {
-							throw new TokenException();
+							throw new TokenException("RationalLiteral can't end in dot");
 						}
 					}
-					yield new RationalLiteral(
-						new BigDecimal(bufferToString(buffer)));
+					yield new RationalLiteral(new BigDecimal(bufferToString(buffer)));
 				} else {
 					throw new TokenException("Unknown start of token: "
 						+ Character.getName(codePoint) + " on line " + line);

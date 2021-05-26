@@ -1,19 +1,27 @@
 package alloy.compiler;
 
-import alloy.compiler.Token.NameSegment;
-import alloy.compiler.ast.Name;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.Map;
+import alloy.compiler.model.Name;
+import java.util.*;
+import java.util.Map.Entry;
+import java.util.function.Supplier;
 
 public class NameDatabase<T> {
 	private final Segment<T> lookup;
+
+	@SafeVarargs
+	public static <T> NameDatabase<T> of(Entry<Name, T>... entries) {
+		var db = new NameDatabase<T>();
+		for(var entry : entries) {
+			db.lookupOrCreate(entry.getKey(), entry::getValue);
+		}
+		return db;
+	}
 
 	public NameDatabase() {
 		this.lookup = new Segment<>();
 	}
 
-	private static class Segment<T> {
+	private static final class Segment<T> {
 		private final Map<String, Segment<T>> next;
 		private T obj;
 
@@ -23,41 +31,73 @@ public class NameDatabase<T> {
 
 		@Override
 		public String toString() {
-			return "[" + obj + " " + next + "]";
+			return "[content=" + obj + "]";
 		}
 	}
 
-	public boolean add(T obj, NameSegment... name) {
-		Segment<T> cur = lookup;
-		int i = 0;
+	/* TODO implement walk method */
 
-		do {
-			cur = cur.next.computeIfAbsent(name[i].text(), s -> new Segment<>());
-			i++;
-		} while(i < name.length);
-
-		if(cur.obj == null) {
-			cur.obj = obj;
-			return true;
-		} else {
-			return false;
-		}
-	}
-
-	public T get(Name name) {
+	/** Lookup or create the exact match to the provided name **/
+	public T lookupOrCreate(Name name, Supplier<T> sup) {
 		Segment<T> cur = lookup;
 		Iterator<String> it = name.iterator();
+
 		do {
-			cur = cur.next.get(it.next());
-			if(cur == null) {
-				return null;
+			cur = cur.next.computeIfAbsent(it.next(), s -> new Segment<>());
+		} while(it.hasNext());
+
+		if(cur.obj == null) {
+			cur.obj = Objects.requireNonNull(sup.get());
+			return cur.obj;
+		} else {
+			return cur.obj;
+		}
+	}
+
+	/** Lookup the all matches for the provided name
+	 *  Useful for finding fields and other things
+	 *  in external modules **/
+	public Map<Name, T> get(Name name) {
+		Objects.requireNonNull(name);
+		Iterator<String> it = name.iterator();
+		Map<Name, T> matches = new TreeMap<>();
+		List<String> sofar = new LinkedList<>();
+		Segment<T> node = lookup;
+		do {
+			String segment = it.next();
+			Segment<T> next = node.next.get(segment);
+			if(next != null) {
+				node = next;
+				sofar.add(segment);
+				if(node.obj != null) {
+					matches.put(Name.of(sofar), node.obj);
+				}
+			} else {
+				return matches;
 			}
 		} while(it.hasNext());
-		return cur.obj;
+		return matches;
 	}
+
+
 
 	@Override
 	public String toString() {
-		return "NameDatabase" + lookup;
+		StringBuilder sb = new StringBuilder();
+		toString(0, lookup.next, sb);
+		return sb.toString();
+	}
+
+	private void toString(int level,
+		Map<String, Segment<T>> cur, StringBuilder build) {
+		for(var entry : cur.entrySet()) {
+			build
+				.append("   ".repeat(level))
+				.append(entry.getKey())
+				.append(" : ")
+				.append(entry.getValue().obj)
+				.append('\n');
+			toString(level + 1, entry.getValue().next, build);
+		}
 	}
 }

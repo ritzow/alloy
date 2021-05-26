@@ -3,30 +3,44 @@ package alloy.compiler;
 import alloy.compiler.AlloyScanner.TokenResult;
 import alloy.compiler.Token.NameSegment;
 import alloy.compiler.Token.SimpleToken;
-import alloy.compiler.ast.Block;
-import alloy.compiler.ast.Name;
-import alloy.compiler.ast.Tag;
-import alloy.compiler.feature.TagHandler;
+import alloy.compiler.model.Block;
+import alloy.compiler.model.Expression;
+import alloy.compiler.model.Name;
+import alloy.compiler.model.AlloyModule;
+import alloy.compiler.model.Tag;
 import java.io.IOException;
+import java.io.Reader;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 
-/** Recursive descent parser for the Alloy programming language **/
+/** Recursive descent parser for the Alloy programming language
+ * Parses a single finite length character sequence **/
 public class AlloyParser {
 	private final AlloyScanner scan;
-	private final AlloyEnvironment env;
+	private final Environment env;
 	private TokenResult current;
 
-	public AlloyParser(AlloyScanner scan, AlloyEnvironment env) throws IOException {
-		this.scan = scan;
+	public static List<AlloyModule> parse(Reader reader, Environment env) {
+		try {
+			return new AlloyParser(reader, env).parse();
+		} catch(IOException | RuntimeException e) {
+			env.log(e);
+			return List.of();
+		}
+	}
+
+	private AlloyParser(Reader reader, Environment env) throws IOException {
+		this.scan = new AlloyScanner(reader);
 		this.env = env;
 		this.current = scan.next();
 	}
 
-	public void parse() throws IOException {
+	/** Parse this file, updating the AlloyEnvironment
+	and return references to the modules it contained **/
+	public List<AlloyModule> parse() throws IOException {
 		List<Block> blocks = matchBlocks();
+		match(SimpleToken.END);
 
 		/* Read in any remaining tokens and print them out */
 		if(current.token() != SimpleToken.END) {
@@ -35,16 +49,16 @@ public class AlloyParser {
 		while(current.token() != SimpleToken.END) {
 			System.out.println(current = scan.next());
 		}
+		return List.of();
 	}
 
 	/** A series of tags and expressions followed by a block or semicolon **/
 	private List<Block> matchBlocks() throws IOException {
 		List<Block> blocks = new ArrayList<>();
 		Block b;
-		do
-		{
-			b = matchBlock();
-		} while(b != null);
+		while((b = matchBlock()) != null) {
+			blocks.add(b);
+		}
 		return blocks;
 	}
 
@@ -55,35 +69,28 @@ public class AlloyParser {
 			if(current.token() instanceof SimpleToken tok) {
 				switch(tok) {
 					case TAG -> tags.add(matchTag());
-					case OPEN_SUB -> {
-						matchSub();
+					case OPEN_BRACE -> {
+						match();
+						System.out.println("Sub start");
+						matchBlocks();
+						match(SimpleToken.CLOSE_BRACE);
+						System.out.println("Sub end");
 						/* TODO return with sub */
 						return new Block(tags, Optional.empty());
 					}
 					case SEMICOLON -> {
+						match();
 						return new Block(tags, Optional.empty());
 					}
-					case END -> {
+					default -> {
+						/* TODO try to match expressions */
+						/* Allow matchBlocks to handle */
 						return null;
 					}
-					default -> throw new ASTException(current);
 				}
-			} else {
-				throw new ASTException(current);
-			}
+			} else
+				return null;
 		} while(true);
-	}
-
-	/** Match anything in braces, matchBlocks might be able to replace this? **/
-	private void matchSub() throws IOException {
-		match(SimpleToken.OPEN_SUB);
-		System.out.println("Sub start");
-		while(current.token() != SimpleToken.CLOSE_SUB) {
-			System.out.println("\t" + current);
-			match();
-		}
-		match();
-		System.out.println("Sub end");
 	}
 
 	/** Match a #, name, followed by any number of expressions **/
@@ -91,21 +98,57 @@ public class AlloyParser {
 		match(SimpleToken.TAG);
 		/* Lookup tag name to find tag handler */
 		Name name = matchName();
-		TagHandler handler = env.lookupTag(name);
+		List<Tag> tags = new ArrayList<>();
 
-		if(handler != null) {
-			handler.handle(List.of()); /* TODO pass in expressions */
-		} else {
-			throw new ASTException("No tag handler with name '" + name + "'");
+		env.modules().get(name).forEach((n, m) -> {
+			Name tagName = n.relativize(name);
+			/* TODO only add tags that are a full match */
+			tags.addAll(m.tags().get(tagName).values());
+		});
+
+		switch(tags.size()) {
+			case 1 -> {
+				/* Feed expressions to tag handler */
+				Tag tag = tags.iterator().next();
+				tag.handle(matchExpressions());
+				return tag;
+			}
+			case 0 -> throw new ASTException("No tag handler with name '"
+				+ name + "'");
+			default -> throw new ASTException("Ambiguous tag name "
+				+ name + ": " + tags);
+
 		}
-
-		/* Feed expressions to to tag handler */
-		return null;
 	}
 
-	/** Match an expression **/
-	private Object matchExpression() {
-		throw new RuntimeException("Not implemented");
+	private List<Expression> matchExpressions() throws IOException {
+		List<Expression> elist = new ArrayList<>();
+
+		/* Match a list of expressions to pass to the tag */
+		do {
+			Optional<Expression> e = tryMatchOuterExpression();
+			if(e.isPresent()) {
+				elist.add(e.get());
+			} else {
+				break;
+			}
+		} while(true);
+		return elist;
+	}
+
+	/**
+	 * Match an expression that can't start with tags
+	 * Avoids ambiguity for tag expressions by requiring
+	 * parentheses around any tags associated with this expression
+	 **/
+	private Optional<Expression> tryMatchOuterExpression() throws IOException {
+		if(current.token() instanceof Expression e) {
+			/* Handle tokens that are already expressions (literal values) */
+			match();
+			return Optional.of(e);
+		} /* TODO parse expressions */ else {
+			return Optional.empty();
+		}
 	}
 
 	/** Match a name: character strings separated by dots **/
@@ -116,7 +159,7 @@ public class AlloyParser {
 				match();
 				segments.add(seg);
 				if(current.token() != SimpleToken.DOT) {
-					return new Name(segments);
+					return Name.ofSegments(segments);
 				} else {
 					match(SimpleToken.DOT);
 				}
@@ -127,6 +170,9 @@ public class AlloyParser {
 	}
 
 	private void match() throws IOException {
+		if(current.token() == SimpleToken.END) {
+			throw new ASTException("Went past end of file");
+		}
 		current = scan.next();
 	}
 
