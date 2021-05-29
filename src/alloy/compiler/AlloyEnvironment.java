@@ -3,6 +3,7 @@ package alloy.compiler;
 import alloy.compiler.Intrinsics.ModuleAlloyBase;
 import alloy.compiler.Intrinsics.ModuleAlloySource;
 import alloy.compiler.model.Name;
+import alloy.compiler.source.AlloyParser;
 import java.io.IOException;
 import java.io.Reader;
 import java.nio.charset.StandardCharsets;

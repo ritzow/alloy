@@ -1,13 +1,12 @@
-package alloy.compiler;
+package alloy.compiler.source;
 
-import alloy.compiler.Token.*;
 import java.io.IOException;
 import java.io.Reader;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
 
-import static alloy.compiler.Token.SimpleToken.*;
+import static alloy.compiler.source.Token.SimpleToken.*;
 
 public class AlloyScanner {
 	private final Reader in;

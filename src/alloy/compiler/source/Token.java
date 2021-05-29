@@ -1,4 +1,4 @@
-package alloy.compiler;
+package alloy.compiler.source;
 
 import alloy.compiler.model.Expression;
 import alloy.compiler.model.Type;

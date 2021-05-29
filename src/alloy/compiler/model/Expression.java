@@ -1,9 +1,11 @@
 package alloy.compiler.model;
 
+import alloy.compiler.source.Token;
+
 public sealed interface Expression permits
-	alloy.compiler.Token.CharacterLiteral,
-	alloy.compiler.Token.RationalLiteral,
-	alloy.compiler.Token.TextLiteral,
+	Token.CharacterLiteral,
+	Token.RationalLiteral,
+	Token.TextLiteral,
 	Expression.BinaryInfix,
 	Name {
 

@@ -1,8 +1,9 @@
-package alloy.compiler;
+package alloy.compiler.source;
 
-import alloy.compiler.AlloyScanner.TokenResult;
-import alloy.compiler.Token.NameSegment;
-import alloy.compiler.Token.SimpleToken;
+import alloy.compiler.Environment;
+import alloy.compiler.source.AlloyScanner.TokenResult;
+import alloy.compiler.source.Token.NameSegment;
+import alloy.compiler.source.Token.SimpleToken;
 import alloy.compiler.model.*;
 import java.io.IOException;
 import java.io.Reader;
@@ -10,7 +11,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
-import static alloy.compiler.Token.SimpleToken.DOT;
+import static alloy.compiler.source.Token.SimpleToken.DOT;
 
 /** Recursive descent parser for the Alloy programming language
  * Parses a single finite length character sequence **/

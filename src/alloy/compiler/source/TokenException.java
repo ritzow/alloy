@@ -1,4 +1,4 @@
-package alloy.compiler;
+package alloy.compiler.source;
 
 public class TokenException extends RuntimeException {
 	public TokenException() {

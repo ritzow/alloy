@@ -1,6 +1,6 @@
-package alloy.compiler;
+package alloy.compiler.source;
 
-import alloy.compiler.AlloyScanner.TokenResult;
+import alloy.compiler.source.AlloyScanner.TokenResult;
 
 /* TODO make this a checked Exception */
 public class ASTException extends RuntimeException {
