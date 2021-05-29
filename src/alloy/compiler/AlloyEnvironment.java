@@ -1,5 +1,7 @@
 package alloy.compiler;
 
+import alloy.compiler.Intrinsics.ModuleAlloyBase;
+import alloy.compiler.Intrinsics.ModuleAlloySource;
 import alloy.compiler.model.Name;
 import java.io.IOException;
 import java.io.Reader;
@@ -17,7 +19,11 @@ public class AlloyEnvironment implements Environment {
 		this.names = new NameDatabase<>();
 		this.names.lookupOrCreate(
 			Name.of("alloy", "source"),
-			Intrinsics::generateBootstrap
+			ModuleAlloySource::new
+		);
+		this.names.lookupOrCreate(
+			Name.of("alloy", "base"),
+			ModuleAlloyBase::new
 		);
 	}
 

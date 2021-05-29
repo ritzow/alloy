@@ -8,21 +8,34 @@ import java.util.Map;
 
 public class Intrinsics {
 	public static AlloyModule generateBootstrap() {
-		return new AlloyModule() {
-			private final NameDatabase<Tag> tags = NameDatabase.of(
-				Map.entry(Name.of("view"),
-					new SimpleIntrinsicTag("alloy.source.view"))
-			);
+		return new ModuleAlloySource();
+	}
 
-			@Override
-			public NameDatabase<Tag> tags() {
-				return tags;
-			}
+	static class ModuleAlloySource implements AlloyModule {
+		private final NameDatabase<Tag> tags = NameDatabase.of(
+			Map.entry(Name.of("view"),
+				new SimpleIntrinsicTag("alloy.source.view"))
+		);
 
-			@Override
-			public String toString() {
-				return tags.toString();
-			}
-		};
+		@Override
+		public NameDatabase<Tag> tags() {
+			return tags;
+		}
+
+		@Override
+		public String toString() {
+			return tags.toString();
+		}
+	}
+
+	static class ModuleAlloyBase implements AlloyModule {
+		private final NameDatabase<Tag> tags = NameDatabase.of(
+			Map.entry(Name.of("module"), new SimpleIntrinsicTag("alloy.base.module"))
+		);
+
+		@Override
+		public NameDatabase<Tag> tags() {
+			return tags;
+		}
 	}
 }

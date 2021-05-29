@@ -3,20 +3,20 @@ package alloy.compiler;
 import alloy.compiler.AlloyScanner.TokenResult;
 import alloy.compiler.Token.NameSegment;
 import alloy.compiler.Token.SimpleToken;
-import alloy.compiler.model.Block;
-import alloy.compiler.model.Expression;
-import alloy.compiler.model.Name;
-import alloy.compiler.model.AlloyModule;
-import alloy.compiler.model.Tag;
+import alloy.compiler.model.*;
 import java.io.IOException;
 import java.io.Reader;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
+import static alloy.compiler.Token.SimpleToken.DOT;
+
 /** Recursive descent parser for the Alloy programming language
  * Parses a single finite length character sequence **/
 public class AlloyParser {
+	private static final int AVERAGE_NAME_LENGTH = 4;
+
 	private final AlloyScanner scan;
 	private final Environment env;
 	private TokenResult current;
@@ -39,14 +39,14 @@ public class AlloyParser {
 	/** Parse this file, updating the AlloyEnvironment
 	and return references to the modules it contained **/
 	public List<AlloyModule> parse() throws IOException {
-		List<Block> blocks = matchBlocks();
+		matchBlocks();
 		match(SimpleToken.END);
 
 		/* Read in any remaining tokens and print them out */
-		if(current.token() != SimpleToken.END) {
+		if(peek() != SimpleToken.END) {
 			System.out.println("Unparsed tokens:");
 		}
-		while(current.token() != SimpleToken.END) {
+		while(peek() != SimpleToken.END) {
 			System.out.println(current = scan.next());
 		}
 		return List.of();
@@ -66,15 +66,15 @@ public class AlloyParser {
 		List<Tag> tags = new ArrayList<>();
 		do {
 			/* Match tags up until semi or sub */
-			if(current.token() instanceof SimpleToken tok) {
+			if(peek() instanceof SimpleToken tok) {
 				switch(tok) {
 					case TAG -> tags.add(matchTag());
 					case OPEN_BRACE -> {
 						match();
-						System.out.println("Sub start");
+						env.log("Sub start");
 						matchBlocks();
 						match(SimpleToken.CLOSE_BRACE);
-						System.out.println("Sub end");
+						env.log("Sub end");
 						/* TODO return with sub */
 						return new Block(tags, Optional.empty());
 					}
@@ -126,7 +126,7 @@ public class AlloyParser {
 
 		/* Match a list of expressions to pass to the tag */
 		do {
-			Optional<Expression> e = tryMatchOuterExpression();
+			Optional<Expression> e = matchExpression();
 			if(e.isPresent()) {
 				elist.add(e.get());
 			} else {
@@ -136,50 +136,143 @@ public class AlloyParser {
 		return elist;
 	}
 
-	/**
-	 * Match an expression that can't start with tags
-	 * Avoids ambiguity for tag expressions by requiring
-	 * parentheses around any tags associated with this expression
-	 **/
-	private Optional<Expression> tryMatchOuterExpression() throws IOException {
-		if(current.token() instanceof Expression e) {
+	private List<Expression> matchExpressionList() throws IOException {
+		/* Match a list of expressions to pass to the tag */
+		List<Expression> elist = new ArrayList<>(4);
+		do {
+			Optional<Expression> e = matchExpression();
+			if(e.isPresent()) {
+				elist.add(e.get());
+			} else {
+				break;
+			}
+		} while(true);
+		return elist;
+	}
+
+	/** Match an expression, may begin with modifier tags TODO tags might require expression list or something? **/
+	private Optional<Expression> matchExpression() throws IOException {
+		if(peek() instanceof Expression e) {
 			/* Handle tokens that are already expressions (literal values) */
 			match();
 			return Optional.of(e);
-		} /* TODO parse expressions */ else {
-			return Optional.empty();
+		} else if (peek() instanceof NameSegment seg) {
+			/* Match named something or other: function call, variable value, dereference, etc. */
+			/* variablename[blah] alloy.base.Print(), fieldname.recordfield..valuefield.field...() */
+			match();
+			/* TODO lookup stuff that starts with seg */
+			return Optional.of(matchDereference(List.of()));
+		} else if(peek() instanceof SimpleToken s) {
+			switch(s) {
+				case OPEN_PAREN -> {
+					match();
+					Optional<Expression> expr = matchExpression();
+					match(SimpleToken.CLOSE_PAREN);
+					return expr;
+				}
+				case TAG -> {
+					/* TODO match tags and associate with expression */
+					matchTag();
+					throw new ASTException("not implemented");
+				}
+				default -> throw new ASTException("Not an expression start " + current);
+			}
+		} else {
+			throw new ASTException("Not an expression start " + current);
 		}
 	}
 
-	/** Match a name: character strings separated by dots **/
+	private Expression matchDereference(List<Object> choices) throws IOException {
+		if(choices.isEmpty()) {
+			throw new ASTException("No matches");
+		}
+
+		if(peek() instanceof SimpleToken tok) {
+			switch(tok) {
+				case DOT -> {
+					/* Matched a double dereference: TODO remove from choices everything that is not dereferenceable */
+					/* Narrow down the list of choices */
+					List<Object> newChoices = new ArrayList<>();
+					for(var opt : choices) {
+						/* TODO dereference this choice and see where it leads */
+
+					}
+					throw new ASTException("Not implemented");
+				}
+				case OPEN_CHEVRON -> {
+					/* generic type or function call */
+					match();
+					/* TODO match type parameter stuff */
+					matchExpression();
+					match(SimpleToken.CLOSE_CHEVRON);
+					throw new ASTException("Not implemented");
+				}
+				case OPEN_PAREN -> {
+					/* function call */
+					match();
+					matchExpression();
+					match(SimpleToken.CLOSE_PAREN);
+					throw new ASTException("Not implemented");
+				}
+				case OPEN_BRACKET -> {
+					match();
+					/* Match subscript parameters */
+					matchExpressionList();
+					match(SimpleToken.CLOSE_BRACKET);
+					throw new ASTException("Not implemented");
+				}
+				default -> throwUnknown();
+			}
+		} else if(peek() instanceof NameSegment seg) {
+
+		} else if(choices.size() == 1) {
+			/* TODO turn only reference into expression */
+			return (Expression)choices.iterator().next();
+		} else {
+			/* More than one choice */
+			throw new ASTException("Ambiguous reference: " + choices);
+		}
+	}
+
+	/** Match a name: character strings separated by dots, only useful for tag names **/
 	private Name matchName() throws IOException {
-		List<NameSegment> segments = new ArrayList<>(4);
+		List<NameSegment> segments = new ArrayList<>(AVERAGE_NAME_LENGTH);
 		do {
-			if(current.token() instanceof NameSegment seg) {
+			/* TODO needs to reuse name elements if it does not match a name */
+			/* Or: What to do if token after dot is not name? */
+			if(peek() instanceof NameSegment seg) {
 				match();
 				segments.add(seg);
-				if(current.token() != SimpleToken.DOT) {
+				if(peek() != DOT) {
 					return Name.ofSegments(segments);
 				} else {
-					match(SimpleToken.DOT);
+					match(DOT);
 				}
 			} else {
-				throw new ASTException("Expected name");
+				throw new ASTException("Name expected");
 			}
 		} while(true);
 	}
 
 	private void match() throws IOException {
-		if(current.token() == SimpleToken.END) {
+		if(peek() == SimpleToken.END) {
 			throw new ASTException("Went past end of file");
 		}
 		current = scan.next();
 	}
 
+	private Token peek() {
+		return current.token();
+	}
+
 	private void match(SimpleToken token) throws IOException {
-		if(current.token() != token) {
+		if(peek() != token) {
 			throw new ASTException(current);
 		}
 		current = scan.next();
+	}
+
+	private void throwUnknown() {
+		throw new ASTException(current);
 	}
 }

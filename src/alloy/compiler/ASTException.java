@@ -2,6 +2,7 @@ package alloy.compiler;
 
 import alloy.compiler.AlloyScanner.TokenResult;
 
+/* TODO make this a checked Exception */
 public class ASTException extends RuntimeException {
 	public ASTException() {
 	}
