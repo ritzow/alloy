@@ -162,7 +162,7 @@ public class AlloyParser {
 			/* variablename[blah] alloy.base.Print(), fieldname.recordfield..valuefield.field...() */
 			match();
 			/* TODO lookup stuff that starts with seg */
-			return Optional.of(matchDereference(List.of()));
+			return Optional.of(matchReference(List.of()));
 		} else if(peek() instanceof SimpleToken s) {
 			switch(s) {
 				case OPEN_PAREN -> {
@@ -183,7 +183,8 @@ public class AlloyParser {
 		}
 	}
 
-	private Expression matchDereference(List<Object> choices) throws IOException {
+	/* Match something ending in a name */
+	private Expression matchReference(List<Object> choices) throws IOException {
 		if(choices.isEmpty()) {
 			throw new ASTException("No matches");
 		}
@@ -191,14 +192,26 @@ public class AlloyParser {
 		if(peek() instanceof SimpleToken tok) {
 			switch(tok) {
 				case DOT -> {
-					/* Matched a double dereference: TODO remove from choices everything that is not dereferenceable */
+					/* Matched a double dereference:
 					/* Narrow down the list of choices */
+					/* TODO basically just need to add stuff to the chain */
+					match();
 					List<Object> newChoices = new ArrayList<>();
-					for(var opt : choices) {
-						/* TODO dereference this choice and see where it leads */
+					if(peek() instanceof NameSegment seg) {
+						/* TODO perform named dereference */
+						for(var opt : choices) {
+							/* TODO dereference this choice and see where it leads */
+						}
+					} else if(peek() instanceof SimpleToken tok2) {
+						/* TODO perform anonymous dereference on all choices */
+						switch(tok2) {
+							case DOT -> {
+								/* Anonymous dereference */
 
-					}
-					throw new ASTException("Not implemented");
+							}
+							default -> throwUnknown(); /* Can't end an expression with a dot */
+						}
+					} /* else end of expression */
 				}
 				case OPEN_CHEVRON -> {
 					/* generic type or function call */
@@ -224,8 +237,6 @@ public class AlloyParser {
 				}
 				default -> throwUnknown();
 			}
-		} else if(peek() instanceof NameSegment seg) {
-
 		} else if(choices.size() == 1) {
 			/* TODO turn only reference into expression */
 			return (Expression)choices.iterator().next();
@@ -233,6 +244,7 @@ public class AlloyParser {
 			/* More than one choice */
 			throw new ASTException("Ambiguous reference: " + choices);
 		}
+		return null;
 	}
 
 	/** Match a name: character strings separated by dots, only useful for tag names **/
