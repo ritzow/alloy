@@ -1,6 +1,7 @@
-#alloy.source.view
+#alloy.source.view 5 + 3 * 2 / zoop.aha;
 
+#bloop "blip";
 
-#alloy.base.module example.helloworld {
-
-}
+#alloy.base.module example.helloworld "blah" {
+	#zoop blah blah blah;
+};

@@ -1,9 +1,8 @@
 package alloy.compiler.source;
 
 import alloy.compiler.Environment;
+import alloy.compiler.model.Expression.CallExpression;
 import alloy.compiler.source.AlloyScanner.TokenResult;
-import alloy.compiler.source.Token.NameSegment;
-import alloy.compiler.source.Token.SimpleToken;
 import alloy.compiler.model.*;
 import java.io.IOException;
 import java.io.Reader;
@@ -11,7 +10,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
-import static alloy.compiler.source.Token.SimpleToken.DOT;
+import static alloy.compiler.source.SimpleToken.DOT;
 
 /** Recursive descent parser for the Alloy programming language
  * Parses a single finite length character sequence **/
@@ -22,7 +21,7 @@ public class AlloyParser {
 	private final Environment env;
 	private TokenResult current;
 
-	public static List<AlloyModule> parse(Reader reader, Environment env) {
+	public static List<Block> parse(Reader reader, Environment env) {
 		try {
 			return new AlloyParser(reader, env).parse();
 		} catch(IOException | RuntimeException e) {
@@ -39,8 +38,8 @@ public class AlloyParser {
 
 	/** Parse this file, updating the AlloyEnvironment
 	and return references to the modules it contained **/
-	public List<AlloyModule> parse() throws IOException {
-		matchBlocks();
+	public List<Block> parse() throws IOException {
+		List<Block> blocks = matchBlocks();
 		match(SimpleToken.END);
 
 		/* Read in any remaining tokens and print them out */
@@ -50,7 +49,12 @@ public class AlloyParser {
 		while(peek() != SimpleToken.END) {
 			System.out.println(current = scan.next());
 		}
-		return List.of();
+
+		for(Block block : blocks) {
+			System.out.println(block);
+		}
+
+		return blocks;
 	}
 
 	/** A series of tags and expressions followed by a block or semicolon **/
@@ -73,15 +77,15 @@ public class AlloyParser {
 					case OPEN_BRACE -> {
 						match();
 						env.log("Sub start");
-						matchBlocks();
+						List<Block> sub = matchBlocks();
 						match(SimpleToken.CLOSE_BRACE);
 						env.log("Sub end");
 						/* TODO return with sub */
-						return new Block(tags, Optional.empty());
+						return new Block(tags, sub);
 					}
 					case SEMICOLON -> {
 						match();
-						return new Block(tags, Optional.empty());
+						return new Block(tags, List.of());
 					}
 					default -> {
 						/* TODO try to match expressions */
@@ -98,32 +102,11 @@ public class AlloyParser {
 	private Tag matchTag() throws IOException {
 		match(SimpleToken.TAG);
 		/* Lookup tag name to find tag handler */
-		Name name = matchName();
-		List<Tag> tags = new ArrayList<>();
-
-		env.modules().get(name).forEach((n, m) -> {
-			Name tagName = n.relativize(name);
-			/* TODO only add tags that are a full match */
-			tags.addAll(m.tags().get(tagName).values());
-		});
-
-		switch(tags.size()) {
-			case 1 -> {
-				/* Feed expressions to tag handler */
-				Tag tag = tags.iterator().next();
-				tag.handle(matchExpressions());
-				return tag;
-			}
-			case 0 -> throw new ASTException("No tag handler with name '"
-				+ name + "'");
-			default -> throw new ASTException("Ambiguous tag name "
-				+ name + ": " + tags);
-
-		}
+		return new Tag(matchName(), matchExpressions());
 	}
 
 	private List<Expression> matchExpressions() throws IOException {
-		List<Expression> elist = new ArrayList<>();
+		List<Expression> elist = new ArrayList<>(1);
 
 		/* Match a list of expressions to pass to the tag */
 		do {
@@ -151,100 +134,56 @@ public class AlloyParser {
 		return elist;
 	}
 
-	/** Match an expression, may begin with modifier tags TODO tags might require expression list or something? **/
+
+
+	/** Match an expression, may begin with modifier tags TODO tags might require expression list or something? */
 	private Optional<Expression> matchExpression() throws IOException {
-		if(peek() instanceof Expression e) {
-			/* Handle tokens that are already expressions (literal values) */
-			match();
-			return Optional.of(e);
-		} else if (peek() instanceof NameSegment seg) {
-			/* Match named something or other: function call, variable value, dereference, etc. */
-			/* variablename[blah] alloy.base.Print(), fieldname.recordfield..valuefield.field...() */
-			match();
-			/* TODO lookup stuff that starts with seg */
-			return Optional.of(matchReference(List.of()));
-		} else if(peek() instanceof SimpleToken s) {
-			switch(s) {
-				case OPEN_PAREN -> {
-					match();
-					Optional<Expression> expr = matchExpression();
-					match(SimpleToken.CLOSE_PAREN);
-					return expr;
-				}
-				case TAG -> {
-					/* TODO match tags and associate with expression */
-					matchTag();
-					throw new ASTException("not implemented");
-				}
-				default -> throw new ASTException("Not an expression start " + current);
-			}
-		} else {
-			throw new ASTException("Not an expression start " + current);
-		}
+		return Exp(0);
 	}
 
-	/* Match something ending in a name */
-	private Expression matchReference(List<Object> choices) throws IOException {
-		if(choices.isEmpty()) {
-			throw new ASTException("No matches");
-		}
+	/* Precedence climbing implementation based on https://www.engr.mun.ca/~theo/Misc/exp_parsing.htm */
 
-		if(peek() instanceof SimpleToken tok) {
-			switch(tok) {
-				case DOT -> {
-					/* Matched a double dereference:
-					/* Narrow down the list of choices */
-					/* TODO basically just need to add stuff to the chain */
-					match();
-					List<Object> newChoices = new ArrayList<>();
-					if(peek() instanceof NameSegment seg) {
-						/* TODO perform named dereference */
-						for(var opt : choices) {
-							/* TODO dereference this choice and see where it leads */
-						}
-					} else if(peek() instanceof SimpleToken tok2) {
-						/* TODO perform anonymous dereference on all choices */
-						switch(tok2) {
-							case DOT -> {
-								/* Anonymous dereference */
+	private Optional<Expression> Exp(int precedence) throws IOException {
+		 Optional<Expression> a = P();
+		 if(a.isEmpty()) {
+		 	return a;
+		 }
+		 Expression t = a.get();
+		 while(peek().binaryOp().isPresent() && peek().binaryOp().get().precedence() >= precedence) {
+		 	Token op = peek();
+		 	int prec = switch(peek().binaryOp().get().assoc()) {
+		 		case RIGHT -> peek().binaryOp().get().precedence();
+		 		case LEFT -> peek().binaryOp().get().precedence() + 1;
+		    };
+		 	match();
+		 	Optional<Expression> e = Exp(prec);
+		 	t = new CallExpression(new NameSegment("TODO:binary-op-" + op),
+			    t, e.orElseThrow(()
+			    -> new ASTException("Binary expression missing right hand side: " + current)));
+		 }
+		 return Optional.of(t);
+	}
 
-							}
-							default -> throwUnknown(); /* Can't end an expression with a dot */
-						}
-					} /* else end of expression */
-				}
-				case OPEN_CHEVRON -> {
-					/* generic type or function call */
-					match();
-					/* TODO match type parameter stuff */
-					matchExpression();
-					match(SimpleToken.CLOSE_CHEVRON);
-					throw new ASTException("Not implemented");
-				}
-				case OPEN_PAREN -> {
-					/* function call */
-					match();
-					matchExpression();
-					match(SimpleToken.CLOSE_PAREN);
-					throw new ASTException("Not implemented");
-				}
-				case OPEN_BRACKET -> {
-					match();
-					/* Match subscript parameters */
-					matchExpressionList();
-					match(SimpleToken.CLOSE_BRACKET);
-					throw new ASTException("Not implemented");
-				}
-				default -> throwUnknown();
-			}
-		} else if(choices.size() == 1) {
-			/* TODO turn only reference into expression */
-			return (Expression)choices.iterator().next();
+	private Optional<Expression> P() throws IOException {
+		if(peek().unaryOp().isPresent()) {
+			Token op = peek();
+			match();
+			var t = Exp(op.unaryOp().get().precedence());
+			return Optional.of(new CallExpression(new NameSegment("TODO:unary-minus-func"),
+				t.orElseThrow(() -> new ASTException("Unary operation missing right hand side: " + current))));
+		} else if(peek() == SimpleToken.OPEN_PAREN) {
+			match();
+			var t = Exp(0);
+			match(SimpleToken.CLOSE_PAREN);
+			return t;
+		} else if(peek() instanceof Expression e) {
+			match();
+			return Optional.of(e);
 		} else {
-			/* More than one choice */
-			throw new ASTException("Ambiguous reference: " + choices);
+			/* TODO maybe this isn't an error, just an absence of expression? */
+			//throw new ASTException("Not an expression " + current);
+			return Optional.empty();
 		}
-		return null;
 	}
 
 	/** Match a name: character strings separated by dots, only useful for tag names **/

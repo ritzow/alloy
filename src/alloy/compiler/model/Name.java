@@ -1,7 +1,7 @@
 package alloy.compiler.model;
 
 import alloy.compiler.source.ASTException;
-import alloy.compiler.source.Token.NameSegment;
+import alloy.compiler.source.NameSegment;
 import java.util.*;
 
 public final class Name implements Iterable<String>, Expression, Comparable<Name> {

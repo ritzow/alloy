@@ -6,7 +6,7 @@ import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
 
-import static alloy.compiler.source.Token.SimpleToken.*;
+import static alloy.compiler.source.SimpleToken.*;
 
 public class AlloyScanner {
 	private final Reader in;
@@ -64,7 +64,7 @@ public class AlloyScanner {
 			case '.' -> advance(DOT);
 			case '<' -> advance(OPEN_CHEVRON);
 			case '>' -> advance(CLOSE_CHEVRON);
-			case '-' -> advance(MINUS);
+			case '-' -> advance(SUBTRACT);
 			case '+' -> advance(ADD);
 			case '*' -> advance(MULTIPLY);
 			case '=' -> advance(EQUALS);

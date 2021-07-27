@@ -48,10 +48,8 @@ public class NameDatabase<T> {
 
 		if(cur.obj == null) {
 			cur.obj = Objects.requireNonNull(sup.get());
-			return cur.obj;
-		} else {
-			return cur.obj;
 		}
+		return cur.obj;
 	}
 
 	/** Lookup the all matches for the provided name
