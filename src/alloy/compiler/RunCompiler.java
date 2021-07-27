@@ -18,8 +18,8 @@ public class RunCompiler {
 			AlloyEnvironment scriptEnv = new AlloyEnvironment();
 			scriptEnv.execute(Path.of(args[0]),
 				Arrays.copyOfRange(args, 0, args.length));
-			System.out.println("Script Environment:");
-			System.out.println(scriptEnv);
+//			System.out.println("Script Environment:");
+//			System.out.println(scriptEnv);
 		} else {
 			System.out.println("Usage: <script file>");
 		}

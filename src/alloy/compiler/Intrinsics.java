@@ -1,9 +1,9 @@
 package alloy.compiler;
 
-import alloy.compiler.model.Name;
-import alloy.compiler.model.Tag;
-import alloy.compiler.model.AlloyModule;
-import alloy.compiler.model.Tag.SimpleIntrinsicTag;
+import alloy.compiler.source.Name;
+import alloy.compiler.source.Tag;
+import alloy.compiler.source.AlloyModule;
+import alloy.compiler.source.Tag.SimpleIntrinsicTag;
 import java.util.Map;
 
 public class Intrinsics {

@@ -1,6 +1,6 @@
 package alloy.compiler;
 
-import alloy.compiler.model.Name;
+import alloy.compiler.source.Name;
 import java.util.*;
 import java.util.Map.Entry;
 import java.util.function.Supplier;

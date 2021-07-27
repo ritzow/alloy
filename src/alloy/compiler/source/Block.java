@@ -1,4 +1,4 @@
-package alloy.compiler.model;
+package alloy.compiler.source;
 
 import java.io.PrintStream;
 import java.util.List;

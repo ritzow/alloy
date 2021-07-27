@@ -2,7 +2,8 @@ package alloy.compiler;
 
 import alloy.compiler.Intrinsics.ModuleAlloyBase;
 import alloy.compiler.Intrinsics.ModuleAlloySource;
-import alloy.compiler.model.Name;
+import alloy.compiler.source.Block;
+import alloy.compiler.source.Name;
 import alloy.compiler.source.AlloyParser;
 import java.io.IOException;
 import java.io.Reader;
@@ -10,7 +11,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
-import alloy.compiler.model.AlloyModule;
+import alloy.compiler.source.AlloyModule;
 
 /** A container for dynamically loading and manipulating modules **/
 public class AlloyEnvironment implements Environment {
@@ -40,7 +41,12 @@ public class AlloyEnvironment implements Environment {
 		extension = extension.substring(extension.lastIndexOf('.'));
 		if(extension.equals(".alloy")) {
 			try(Reader in = Files.newBufferedReader(file, StandardCharsets.UTF_8)) {
-				List<AlloyModule> modules = AlloyParser.parse(in, this);
+				List<Block> modules = AlloyParser.parse(in, this);
+
+				for(Block block : modules) {
+					block.write(System.out);
+				}
+
 				if(modules.size() > 1) {
 					log("Input script file must contain a single module");
 				} else {

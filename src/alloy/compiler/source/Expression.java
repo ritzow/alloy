@@ -1,7 +1,6 @@
-package alloy.compiler.model;
+package alloy.compiler.source;
 
-import alloy.compiler.model.Expression.*;
-import alloy.compiler.source.*;
+import alloy.compiler.source.Expression.*;
 import java.util.List;
 
 public sealed interface Expression permits

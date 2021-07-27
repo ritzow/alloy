@@ -1,8 +1,5 @@
 package alloy.compiler.source;
 
-import alloy.compiler.model.Expression;
-import alloy.compiler.model.Type;
-
 public final record CharacterLiteral(int codePoint) implements Token, Expression {
 	@Override
 	public String toString() {

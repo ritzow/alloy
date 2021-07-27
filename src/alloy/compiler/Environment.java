@@ -1,6 +1,6 @@
 package alloy.compiler;
 
-import alloy.compiler.model.AlloyModule;
+import alloy.compiler.source.AlloyModule;
 
 public interface Environment {
 	void log(Exception e);

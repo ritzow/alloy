@@ -1,8 +1,6 @@
 package alloy.compiler.source;
 
-import alloy.compiler.model.BinaryOp;
-import alloy.compiler.model.Expression.*;
-import alloy.compiler.model.UnaryOp;
+import alloy.compiler.source.Expression.*;
 import java.util.Optional;
 
 /*

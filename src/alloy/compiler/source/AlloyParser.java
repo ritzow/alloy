@@ -1,9 +1,8 @@
 package alloy.compiler.source;
 
 import alloy.compiler.Environment;
-import alloy.compiler.model.Expression.CallExpression;
+import alloy.compiler.source.Expression.CallExpression;
 import alloy.compiler.source.AlloyScanner.TokenResult;
-import alloy.compiler.model.*;
 import java.io.IOException;
 import java.io.Reader;
 import java.util.ArrayList;

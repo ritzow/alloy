@@ -1,6 +1,6 @@
 package alloy.compiler.type;
 
-import alloy.compiler.model.Type;
+import alloy.compiler.source.Type;
 
 public final class RationalLiteralType implements Type {
 

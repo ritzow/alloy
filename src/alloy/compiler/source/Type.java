@@ -1,4 +1,4 @@
-package alloy.compiler.model;
+package alloy.compiler.source;
 
 import alloy.compiler.type.*;
 

@@ -1,8 +1,5 @@
 package alloy.compiler.source;
 
-import alloy.compiler.model.Expression;
-import alloy.compiler.model.Type;
-
 public final record NameSegment(String text) implements Token, Expression {
 	@Override
 	public Type type() {
