@@ -21,9 +21,7 @@ public class AlloyScanner {
 		this.line = 1;
 	}
 
-	public static record ScanContext(int lineNumber, int columnNumber) {
-
-	}
+	public static record ScanContext(int lineNumber, int columnNumber) {}
 
 	public static record TokenResult(Token token, ScanContext context) {
 		@Override
@@ -70,6 +68,23 @@ public class AlloyScanner {
 			case '=' -> advance(EQUALS);
 			case '?' -> advance(QUESTION_MARK);
 			case ':' -> advance(COLON);
+			case '^' -> advance(XOR);
+			case '|' -> {
+				if((codePoint = nextCodePoint()) == '|') {
+					yield advance(LOGICAL_OR);
+				} else {
+					yield BITWISE_OR;
+				}
+			}
+			case '&' -> {
+				if((codePoint = nextCodePoint()) == '&') {
+					yield advance(LOGICAL_AND);
+				} else {
+					yield BITWISE_AND;
+				}
+			}
+			case '~' -> advance(BITWISE_NOT);
+			case '!' -> advance(LOGICAL_NOT);
 			/* UnicodeCodePointLiteral */
 			case '\'' -> {
 				if((codePoint = nextCodePoint()) == '\'') {
@@ -177,8 +192,8 @@ public class AlloyScanner {
 
 	//TODO count line numbers
 	private Token skipMultilineComment() throws IOException {
-		int depth = 1;
 		codePoint = nextCodePoint();
+		int depth = 1;
 		do {
 			switch(codePoint) {
 				case '/' -> {
