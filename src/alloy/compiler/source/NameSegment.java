@@ -5,4 +5,9 @@ public final record NameSegment(String text) implements Token, Expression {
 	public Type type() {
 		throw new UnsupportedOperationException("Second pass type reference lookup not implemented");
 	}
+
+	@Override
+	public String toSource() {
+		return text;
+	}
 }

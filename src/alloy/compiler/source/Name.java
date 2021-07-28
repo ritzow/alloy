@@ -93,4 +93,9 @@ public final class Name implements Iterable<String>, Expression, Comparable<Name
 			}
 		} while(true);
 	}
+
+	@Override
+	public String toSource() {
+		return toString();
+	}
 }

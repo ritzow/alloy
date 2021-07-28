@@ -8,4 +8,9 @@ public final record RationalLiteral(BigDecimal number) implements Token, Express
 	public Type type() {
 		throw new RuntimeException("Not implemented");
 	}
+
+	@Override
+	public String toSource() {
+		return number.toPlainString();
+	}
 }

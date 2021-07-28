@@ -14,4 +14,10 @@ public final record CharacterLiteral(int codePoint) implements Token, Expression
 	public Type type() {
 		throw new RuntimeException("Not implemented");
 	}
+
+	@Override
+	public String toSource() {
+		/* TODO this won't work for characters above 16bits */
+		return "'" + Character.toString(codePoint) + "'";
+	}
 }
