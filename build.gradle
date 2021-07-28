@@ -1,0 +1,30 @@
+plugins {
+	id 'java'
+	id 'application'
+}
+
+sourceSets {
+	main {
+		java {
+			srcDir 'src'
+		}
+	}
+}
+
+java {
+	sourceCompatibility JavaVersion.VERSION_16
+}
+
+compileJava {
+	options.compilerArgs.add('--enable-preview')
+}
+
+application {
+	mainModule.set('alloy.compiler')
+	mainClass.set('alloy.compiler.RunCompiler')
+}
+
+run {
+	jvmArgs.add('--enable-preview')
+	args "example/Simple.alloy"
+}
