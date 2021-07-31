@@ -1,7 +1,6 @@
 package alloy.compiler.source;
 
 import alloy.compiler.SourceReconstructable;
-import java.io.PrintStream;
 import java.util.List;
 
 public record Block(List<Tag> tags, List<Block> sub) implements SourceReconstructable {
@@ -15,7 +14,10 @@ public record Block(List<Tag> tags, List<Block> sub) implements SourceReconstruc
 		if(sub.isEmpty()) {
 			sb.append(';');
 		} else {
-			sb.append(" {\n");
+			if(!tags.isEmpty()) {
+				sb.append(' ');
+			}
+			sb.append("{\n");
 
 			for(var block : sub) {
 				sb.append(block.toSource().indent(4));

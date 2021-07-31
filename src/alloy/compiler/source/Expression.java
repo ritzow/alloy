@@ -70,7 +70,7 @@ public sealed interface Expression extends SourceReconstructable permits
 	final record NegateExpression(Expression expr) implements Expression {
 		@Override
 		public String toSource() {
-			return "-(" + expr.toSource() + ")";
+			return "(-" + expr.toSource() + ")";
 		}
 	}
 	final record ExclusiveOrExpression(Expression left, Expression right) implements Expression {
@@ -88,7 +88,7 @@ public sealed interface Expression extends SourceReconstructable permits
 	final record LogicalNotExpression(Expression expr) implements Expression {
 		@Override
 		public String toSource() {
-			return "!(" + expr.toSource() + ")";
+			return "(!" + expr.toSource() + ")";
 		}
 	}
 	final record LogicalOrExpression(Expression left, Expression right) implements Expression {
