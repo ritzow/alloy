@@ -63,7 +63,6 @@ public class AlloyParser {
 						match();
 						List<Block> sub = matchBlocks();
 						match(SimpleToken.CLOSE_BRACE);
-						/* TODO return with sub */
 						return Optional.of(new Block(tags, sub));
 					}
 					case SEMICOLON -> {
@@ -71,13 +70,18 @@ public class AlloyParser {
 						return Optional.of(new Block(tags, List.of()));
 					}
 					default -> {
-						/* TODO try to match expressions */
-						/* Allow matchBlocks to handle */
+						if(!tags.isEmpty()) {
+							throw new ASTException("Block is not closed " + current);
+						}
 						return Optional.empty();
 					}
 				}
-			} else
+			} else {
+				if(!tags.isEmpty()) {
+					throw new ASTException("Block is not closed " + current);
+				}
 				return Optional.empty();
+			}
 		} while(true);
 	}
 
