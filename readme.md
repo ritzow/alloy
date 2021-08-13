@@ -1,0 +1,3 @@
+# "Alloy" Compiler
+
+A parser and scanner for what could be a C or Java-like programming language. The code currently creates some basic nested data structures with "tags" (similar to Java annotations, using "#" instead of "@") which store expression parameters separated by the termination of the tag name or previous expression. This provides a way for the language to be keyword-free, which could allow source code to be entirely in non-English provided that built-in types are given name aliases. Because tags and expressions are used, everything must be lazy evaluated, program structure cannot necessarily be determined at parse-time.
