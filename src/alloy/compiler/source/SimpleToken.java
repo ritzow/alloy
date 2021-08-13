@@ -74,7 +74,7 @@ public enum SimpleToken implements Token {
 		public Optional<BinaryOp> binaryOp() {
 			return Optional.of(new BinaryOp(DIVIDE.binaryOp().get().precedence() + 1, Associativity.LEFT, DereferenceExpression::new));
 		}
-		/* TODO add as unary for dereferencing */
+		/* TODO add unary right-associative with lower precedence than binary for multi-dereferencing */
 	},
 	ADD {
 		@Override

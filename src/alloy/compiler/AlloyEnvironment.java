@@ -1,38 +1,33 @@
 package alloy.compiler;
 
-import alloy.compiler.Intrinsics.ModuleAlloyBase;
-import alloy.compiler.Intrinsics.ModuleAlloySource;
-import alloy.compiler.source.Block;
-import alloy.compiler.source.Name;
+import alloy.compiler.env.AlloyModule;
 import alloy.compiler.source.AlloyParser;
+import alloy.compiler.source.Block;
 import java.io.IOException;
 import java.io.Reader;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
-import alloy.compiler.source.AlloyModule;
 
-/** A container for dynamically loading and manipulating modules **/
+/**
+ * A container for dynamically loading and manipulating modules
+ *
+ * An alloy environment is a compiler context that has at most
+ * one instance of any defined language construct specifications.
+ * That means there cannot be more than one
+ **/
 public class AlloyEnvironment implements Environment {
 	private final NameDatabase<AlloyModule> names;
 
 	public AlloyEnvironment() {
 		this.names = new NameDatabase<>();
-		this.names.lookupOrCreate(
-			Name.of("alloy", "source"),
-			ModuleAlloySource::new
-		);
-		this.names.lookupOrCreate(
-			Name.of("alloy", "base"),
-			ModuleAlloyBase::new
-		);
 	}
 
 	/** Register some files, potentially built-in libraries **/
-	public void load(Path... files) throws IOException {
-
-	}
+//	public void load(Path... files) throws IOException {
+//
+//	}
 
 	/** Parse and execute an initial linker script file **/
 	public void execute(Path file, String... args) throws IOException {
@@ -44,8 +39,10 @@ public class AlloyEnvironment implements Environment {
 				List<Block> modules = AlloyParser.parse(in, this);
 
 				for(Block block : modules) {
-					block.write(System.out);
+					System.out.println(block.toSource());
 				}
+
+				modules.clear();
 
 				if(modules.size() > 1) {
 					log("Input script file must contain a single module");
